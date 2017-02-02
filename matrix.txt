@@ -1,0 +1,44 @@
+cell_indexes (The index of each cell in the student's answer): 
+    product(0..rows(studentAnswer), 0..cols(studentAnswer))
+
+invalid_cells (The positions of the cells in the student's answer which can be interpreted as numbers):
+    filter(isNumber(studentAnswer[row][col]), [row,col], cell_indexes)
+
+studentMatrix (The student's answer, with each cell parsed to numbers): 
+    assert(len(invalid_cells)=0,
+        warn("The following cells can't be interpeted as numbers: "+join(invalid_cells, ', '))
+        fail("Not all of the cells in your answer are valid numbers.")
+    );
+    matrix(map(map(parseNumber(c, setting('options')), c, row), row, studentAnswer))
+
+wrong_precision_cells (The indexes of the cells which are given to the wrong precision):
+    filter(not givenToPrecision(studentMatrix[row][col], setting('precision')), [row,col], cell_indexes)
+
+wrong_size (Does the student's answer have the correct dimensions?):
+    assert(rows(studentMatrix)=rows(setting('correctAnswer')) and cols(studentMatrix)=cols(setting('correctAnswer')),
+        incorrect("Your matrix has the wrong dimensions.");
+        end
+    );
+
+rounded_matrix (The student's answer, with each cell rounded to the required precision): 
+    round(studentMatrix, setting('precision'))
+
+correct_cells (The indexes of the cells which are correct):
+    map(withinTolerance(rounded_matrix[row][col], correctAnswer[row][col], setting('tolerance')), [row,col], cell_indexes)
+
+mark:
+    if(len(correct_cells)=0,
+        correct("Your answer is correct");
+    ,
+        if(setting('mark_per_cell'),
+            award(len(correct_cells)/num_cells,"One or more cells in your answer were incorrect.")
+        ,
+            incorrect("Your answer is incorrect")
+            end()
+        )
+    );
+    assert(len(wrong_precision_cells)=0,
+        multiply_credit(setting('wrong_precision_credit'), "The following cells are not written to the required precision: "+join(wrong_precision_cells, ', '))
+    );
+
+as_jme: studentMatrix
