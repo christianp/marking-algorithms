@@ -1069,15 +1069,13 @@ var Scope = jme.Scope = function(scopes) {
         scopes = [scopes,undefined];
     }
     this.question = scopes[0].question || this.question;
-    if(scopes[0].__proto__!==Scope.prototype) {
+    if(!scopes[0].evaluate) {
         this.extras = scopes[0];
         return;
     } else {
         this.parent = scopes[0];
         this.extras = scopes[1] || {};
     }
-
-    this.evaluate = this.parent.evaluate;
 
     return;
 }

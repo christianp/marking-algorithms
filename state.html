@@ -23,120 +23,33 @@
             td, th {
                 text-align: right;
                 padding: 0.5em;
+                vertical-align: top;
             }
-            td.description {
-                font-family: monospace;
+            textarea {
+                width: 100%;
+                height: 40vh;
             }
         </style>
 	</head>
     <body>
         <p>The fun stuff is happening in the console</p>
+        <textarea id="algorithm">
+a (Block A):
+    [apply(b),feedback("hi"),feedback("bye")]
 
-        <script>
-			Numbas.queueScript('base',[],function() {});
-			Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
-				let jme = Numbas.jme;
-                let math = Numbas.math;
+b (Block B):
+    [map(feedback(x),x,["b","b2"])]
+        </textarea>
 
-                let scope = window.scope = new Numbas.jme.Scope(Numbas.jme.builtinScope);
-                let old_evaluate = scope.evaluate.bind(scope);
-                scope.evaluate = function(expr, variables) {
-                    var is_top = this.state===undefined || this.finished;
-                    if(is_top) {
-                        console.log('------------');
-                    }
-                    this.finished = false;
-                    var old_state = is_top ? [] : (this.state || []);
-                    this.state = [];
-                    var v = old_evaluate(expr, variables);
-                    this.state = old_state.concat(this.state);
-                    if(is_top) {
-                        this.finished = true;
-                        console.log('^^^^^^^^^^^^');
-                    }
-                    return v;
-                }
+        <table id="output">
+            <thead>
+                <tr><th>Note</th><th>State</th></tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
 
-                var TString = Numbas.jme.types.TString;
-                var TList = Numbas.jme.types.TList;
-                var TName = Numbas.jme.types.TName;
-
-                function state_fn(name, args, outtype, fn) {
-                    return new Numbas.jme.funcObj(name,args,outtype,null,{
-                        evaluate: function(args, scope) {
-                            var res = fn.apply(this,arguments);
-                            console.log('add states',res.state);
-                            scope.state = scope.state.concat(res.state);
-                            return res.return;
-                        }
-                    });
-                }
-
-                scope.addFunction(state_fn('feedback',[TString],TString,function(args,scope) {
-                    var message = args[0];
-
-                    return {
-                        return: message,
-                        state: [{type:"feedback", message:message.value}]
-                    };
-                }));
-
-                scope.addFunction(state_fn('correct',[TString],TString,function(args,scope) {
-                    var message = args[0];
-
-                    return {
-                        return: message,
-                        state: [{type:"set_credit", credit:1, message:message.value}]
-                    };
-                }));
-
-                scope.addFunction(state_fn('many',[TList],TList,function(args,scope) {
-                    var messages = args[0];
-
-                    var states = messages.value.map(function(message) {
-                        return {type:"feedback", message:message.value}
-                    });
-                        
-                    return {
-                        return: messages,
-                        state: states
-                    };
-                }));
-
-                scope.addFunction(state_fn('apply',[TName],TName,function(args,scope) {
-                    var name = args[0].tok.name;
-                    console.log('apply',name,scope.states[name]);
-
-                    return {
-                        return: args[0].tok,
-                        state: scope.states[name]
-                    };
-                }));
-                Numbas.jme.lazyOps.push('apply');
-
-
-                function makeo(expr) {
-                    var tree = Numbas.jme.compile(expr);
-                    return {
-                        tree: tree,
-                        vars: Numbas.jme.findvars(tree)
-                    }
-                }
-
-                var todo = {
-                    a: makeo('[apply(b),feedback("hi"),feedback("bye")]'),
-                    b: makeo('[feedback("b")]')
-                }
-                scope.states = {};
-                var result = jme.variables.makeVariables(todo,scope,null,function(name,todo,scope) {
-                    console.log('try to compute '+name);
-                    var res = Numbas.jme.variables.computeVariable.apply(this,arguments);
-                    scope.states[name] = scope.state.slice();
-                    console.log('computed '+name);
-                    return res;
-                });
-            });
-        </script>
+        <script src="state.js"></script>
 	</body>
 </html>
 
