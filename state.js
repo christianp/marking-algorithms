@@ -172,7 +172,6 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         try {
             var tree = Numbas.jme.compile(expr);
         } catch(e) {
-            console.info(note);
             throw(e);
         }
         return {
@@ -221,7 +220,6 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
                         var res = Numbas.jme.variables.computeVariable.apply(this,arguments);
                         scope.setVariable(name, res);
                     } catch(e) {
-                        console.info(name);
                         throw(e);
                     }
                     scope.states[name] = scope.state.slice();
@@ -229,9 +227,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
                 return scope.variables[name];
             });
         } catch(e) {
-            console.error(e.message);
-            console.log(e.stack);
-            return;
+            throw(e);
         }
         for(var x in scope.states) {
             var tr = document.createElement('tr');
@@ -242,7 +238,6 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         }
 
         var result = finalise_state(scope.states['mark']);
-        console.log(result);
         summary.querySelector('#valid').innerHTML = result.valid ? 'Yes' : 'No';
         summary.querySelector('#credit').innerHTML = result.credit;
         summary.querySelector('#messages').innerHTML = result.messages.map(x => '<li>'+x+'</li>').join(' ');
@@ -261,7 +256,6 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             var state = states[i];
             var old_credit = credit;
             var message = null;
-            console.log(state.type);
             switch(state.type) {
                 case 'set_credit':
                     credit = state.credit;
@@ -336,7 +330,13 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         localStorage.answer = answer_input.value;
         localStorage.algorithm = algorithm_input.value;
         localStorage.settings = settings_input.value;
-        go(answer_input.value, algorithm_input.value, settings_input.value);
+        var error_box = document.getElementById('error');
+        error_box.innerHTML = '';
+        try {
+            go(answer_input.value, algorithm_input.value, settings_input.value);
+        } catch(e) {
+            error_box.innerHTML = e.message;
+        }
     }
     algorithm_input.addEventListener('input',update);
     answer_input.addEventListener('input',update);
