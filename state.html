@@ -23,6 +23,7 @@
             td, th {
                 padding: 0.5em;
                 vertical-align: top;
+                word-break: break-word;
             }
             input {
                 width: 100%;
@@ -57,8 +58,15 @@
             ul {
                 margin:0;
             }
+            #output ul {
+                max-height: 5em;
+                overflow-y: auto;
+            }
             li ~ li {
                 margin-top: 0.5em;
+            }
+            .description {
+                width: 20em;
             }
         </style>
 	</head>
@@ -85,31 +93,31 @@
             <label for="algorithm">
                 Marking algorithm
                 <textarea id="algorithm">
-studentNumber:
+studentNumber (The student's answer, parsed as a number):
    if(settings["allowFraction"],
       parseNumber_or_fraction(studentAnswer,"en")
    ,
       parseNumber(studentAnswer,"en")
    )
 
-isFraction:
+isFraction (Is the student's answer a fraction?):
    "/" in studentAnswer
 
-numerator:
+numerator (The numerator of the student's answer, or 0 if not a fraction):
    if(isFraction,
       parsenumber(split(studentAnswer,"/")[0],"en")
    ,
       0
    )
 
-denominator:
+denominator (The numerator of the student's answer, or 0 if not a fraction):
    if(isFraction,
       parsenumber(split(studentAnswer,"/")[1],"en")
    ,
       0
    )
 
-cancelled:
+cancelled (Is the student's answer a cancelled fraction?):
    if(gcd(numerator,denominator)=1,
       feedback("Your fraction is cancelled");
       true
@@ -118,16 +126,16 @@ cancelled:
       false
    )
 
-validNumber:
+validNumber (Is the student's answer a valid number?):
    if(isNaN(studentNumber),
       warn("Your answer is not a valid number");
       fail("Your answer is not a valid number")
    ,
-      feedback("valid");
+      feedback("Your answer is a valid number");
       true
    )
 
-numberInRange:
+numberInRange (Is the student's number in the allowed range?):
    if(studentNumber>=settings["minValue"] and studentNumber<=settings["maxValue"],
       correct("Your answer is correct")
    ,
@@ -135,7 +143,7 @@ numberInRange:
       end()
    )
 
-correctPrecision:   if(togivenprecision(studentanswer,settings['precisionType'],settings['precision'],false),
+correctPrecision (Has the student's answer been given to the desired precision?):   if(togivenprecision(studentanswer,settings['precisionType'],settings['precision'],false),
    feedback("You gave your answer to the right precision");
    true
 ,
@@ -154,6 +162,9 @@ mark (Mark the student's answer):
         apply(correctPrecision)
     );
     feedback("This is the end of the marking procedure.")
+ 
+as_jme (The student's answer, to be reused by other parts):
+    studentNumber
                 
                 </textarea>
             </label>

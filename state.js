@@ -163,16 +163,16 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
     }
 
 
-    function makeBlock(block) {
-        var re_block = /^((?:\$?[a-zA-Z_][a-zA-Z0-9_]*'*)|\?\??)(?:\s*\(([^)]*)\))?\s*:\s*((?:.|\n)*)$/m;
-        var m = re_block.exec(block.trim());
+    function makeNote(note) {
+        var re_note = /^((?:\$?[a-zA-Z_][a-zA-Z0-9_]*'*)|\?\??)(?:\s*\(([^)]*)\))?\s*:\s*((?:.|\n)*)$/m;
+        var m = re_note.exec(note.trim());
         var name = m[1];
         var description = m[2];
         var expr = m[3];
         try {
             var tree = Numbas.jme.compile(expr);
         } catch(e) {
-            console.info(block);
+            console.info(note);
             throw(e);
         }
         return {
@@ -183,7 +183,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         }
     }
 
-    function go(studentAnswer, blocks, settings) {
+    function go(studentAnswer, notes, settings) {
         console.clear();
 
         var output = document.querySelector('#output tbody');
@@ -193,11 +193,11 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         });
 
         try {
-            blocks = blocks.split(/\n(\s*\n)+/);
+            notes = notes.split(/\n(\s*\n)+/);
             var todo = {};
-            blocks.forEach(function(block) {
-                if(block.trim().length) {
-                    var res = makeBlock(block);
+            notes.forEach(function(note) {
+                if(note.trim().length) {
+                    var res = makeNote(note);
                     todo[res.name] = res;
                 }
             });
@@ -237,7 +237,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             var tr = document.createElement('tr');
             var state = '<ul>'+scope.states[x].map(s => '<li>'+JSON.stringify(s)+'</li>').join(' ')+'</ul>';
             var value = Numbas.jme.display.treeToJME({tok:scope.getVariable(x)});
-            tr.innerHTML = '<td>'+x+'</td><td>'+state+'</td>'+'<td>'+value+'</td>';
+            tr.innerHTML = '<td class="description">'+todo[x].description+'</td><td>'+state+'</td>'+'<td>'+value+'</td>';
             output.appendChild(tr);
         }
 
