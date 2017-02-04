@@ -316,6 +316,13 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
     var algorithm_input = document.getElementById('algorithm');
     var answer_input = document.getElementById('answer');
     var settings_input = document.getElementById('settings');
+
+    var originals = {
+        answer: answer_input.value,
+        algorithm: algorithm_input.value,
+        settings: settings_input.value
+    };
+
     if(localStorage.algorithm) {
         algorithm_input.value = localStorage.algorithm;
     }
@@ -335,4 +342,13 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
     answer_input.addEventListener('input',update);
     settings_input.addEventListener('input',update);
     update();
+
+    document.getElementById('reset').addEventListener('click',function() {
+        if(confirm("Reset the answer, settings, and marking algorithm fields?")) {
+            answer_input.value = originals.answer;
+            algorithm_input.value = originals.algorithm;
+            settings_input.value = originals.settings;
+            update();
+        }
+    });
 });

@@ -73,12 +73,12 @@
     <body>
         <section>
             <label for="answer">
-                Answer
+                Answer (available as a string called <code>studentAnswer</code> in the marking algorithm)
                 <input id="answer" name="answer" type="text" value="1" />
             </label>
 
             <label for="settings">
-                Settings
+                Settings (a JSON dictionary of options, available as <code>settings</code> in the marking algorithm)
                 <textarea id="settings">
 {
     "minValue": 1,
@@ -168,6 +168,10 @@ as_jme (The student's answer, to be reused by other parts):
                 
                 </textarea>
             </label>
+
+            <div>
+                <button type="button" id="reset">Reset</button>
+            </div>
         </section>
 
         <section>
