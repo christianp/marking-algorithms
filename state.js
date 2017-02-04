@@ -237,7 +237,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             var tr = document.createElement('tr');
             var state = '<ul>'+scope.states[x].map(s => '<li>'+JSON.stringify(s)+'</li>').join(' ')+'</ul>';
             var value = Numbas.jme.display.treeToJME({tok:scope.getVariable(x)});
-            tr.innerHTML = '<td class="description">'+todo[x].description+'</td><td>'+state+'</td>'+'<td>'+value+'</td>';
+            tr.innerHTML = '<td class="description">'+(todo[x].description||x)+'</td><td>'+state+'</td>'+'<td>'+value+'</td>';
             output.appendChild(tr);
         }
 
