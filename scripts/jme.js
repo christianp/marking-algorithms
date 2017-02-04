@@ -792,6 +792,8 @@ var jme = Numbas.jme = /** @lends Numbas.jme */ {
                     o[key] = jme.unwrapValue(v.value[key]);
                 });
                 return o;
+            case 'name':
+                return v.name;
 		    default:
     			return v.value;
         }
@@ -1127,6 +1129,14 @@ Scope.prototype = /** @lends Numbas.jme.Scope.prototype */ {
      */
     getVariable: function(name) {
         return this.resolve('variables',name);
+    },
+
+    /** Set the given variable name
+     * @param {string} name
+     * @param {Numbas.jme.token} value
+     */
+    setVariable: function(name, value) {
+        this.variables[name.toLowerCase()] = value;
     },
 
     /** Get all definitions of the given function name.

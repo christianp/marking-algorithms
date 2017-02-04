@@ -21,33 +21,161 @@
 
         <style>
             td, th {
-                text-align: right;
                 padding: 0.5em;
                 vertical-align: top;
+            }
+            input {
+                width: 100%;
             }
             textarea {
                 width: 100%;
                 height: 40vh;
             }
+            body {
+                display: flex;
+            }
+            section {
+                flex: 1 1 50%;
+                padding: 0.5rem;
+            }
+            table {
+                width: 100%;
+            }
+            label {
+                display: block;
+            }
+            label ~ label {
+                margin-top: 1rem;
+            }
+            #output {
+                font-family: monospace;
+                border-collapse: collapse;
+            }
+            #output tbody tr:nth-child(even) td {
+                background: #eee;
+            }
+            ul {
+                margin:0;
+            }
+            li ~ li {
+                margin-top: 0.5em;
+            }
         </style>
 	</head>
     <body>
-        <p>The fun stuff is happening in the console</p>
-        <textarea id="algorithm">
-a (Block A):
-    [apply(b),feedback("hi"),feedback("bye")]
+        <section>
+            <label for="answer">
+                Answer
+                <input id="answer" name="answer" type="text" value="1" />
+            </label>
 
-b (Block B):
-    [map(feedback(x),x,["b","b2"])]
-        </textarea>
+            <label for="settings">
+                Settings
+                <textarea id="settings">
+{
+    "minValue": 1,
+    "maxValue": 2,
+    "precisionType": "sigfig",
+    "precision": 1,
+    "allowFraction": true
+} 
+                
+                </textarea>
+            </label>
+            <label for="algorithm">
+                Marking algorithm
+                <textarea id="algorithm">
+studentNumber:
+   if(settings["allowFraction"],
+      parseNumber_or_fraction(studentAnswer,"en")
+   ,
+      parseNumber(studentAnswer,"en")
+   )
 
-        <table id="output">
-            <thead>
-                <tr><th>Note</th><th>State</th></tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
+isFraction:
+   "/" in studentAnswer
+
+numerator:
+   if(isFraction,
+      parsenumber(split(studentAnswer,"/")[0],"en")
+   ,
+      0
+   )
+
+denominator:
+   if(isFraction,
+      parsenumber(split(studentAnswer,"/")[1],"en")
+   ,
+      0
+   )
+
+cancelled:
+   if(gcd(numerator,denominator)=1,
+      feedback("Your fraction is cancelled");
+      true
+   ,
+      multiply_credit(0.5,"Your fraction is not cancelled");
+      false
+   )
+
+validNumber:
+   if(isNaN(studentNumber),
+      warn("Your answer is not a valid number");
+      fail("Your answer is not a valid number")
+   ,
+      feedback("valid");
+      true
+   )
+
+numberInRange:
+   if(studentNumber>=settings["minValue"] and studentNumber<=settings["maxValue"],
+      correct("Your answer is correct")
+   ,
+      incorrect("Your answer is incorrect");
+      end()
+   )
+
+correctPrecision:   if(togivenprecision(studentanswer,settings['precisionType'],settings['precision'],false),
+   feedback("You gave your answer to the right precision");
+   true
+,
+   multiply_credit(0.5,"You gave your answer to the wrong precision");
+   false
+)
+
+mark (Mark the student's answer):
+    feedback("Your answer: "+studentanswer);
+    apply(validNumber);
+    apply(numberInRange);
+    assert(numberInRange,end());
+    if(isFraction,
+        apply(cancelled)
+    ,
+        apply(correctPrecision)
+    );
+    feedback("This is the end of the marking procedure.")
+                
+                </textarea>
+            </label>
+        </section>
+
+        <section>
+            <table id="output">
+                <thead>
+                    <tr><th>Note</th><th>State</th><th>Value</th></tr>
+                </thead>
+                <tbody class="clear">
+                </tbody>
+            </table>
+            <div id="summary">
+                <p>Valid: <span class="clear" id="valid"></span></p>
+                <p>Credit: <span class="clear" id="credit"></span></p>
+                <h3>Messages</h3>
+                <ul id="messages" class="clear"></ul>
+                <h3>Warnings</h3>
+                <ul id="warnings" class="clear"></ul>
+            </div>
+        </section>
 
         <script src="state.js"></script>
 	</body>
