@@ -332,9 +332,11 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         localStorage.settings = settings_input.value;
         var error_box = document.getElementById('error');
         error_box.innerHTML = '';
+        error_box.classList.remove('has-error');
         try {
             go(answer_input.value, algorithm_input.value, settings_input.value);
         } catch(e) {
+            error_box.classList.add('has-error');
             error_box.innerHTML = e.message;
         }
     }
