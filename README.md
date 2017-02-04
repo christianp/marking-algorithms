@@ -1,5 +1,7 @@
 # A language for defining marking algorithms
 
+**[Demo](state.html)**
+
 A marking algorithm is a set of *notes*.
 
 A note is a name, an optional description, and a list of procedures.
