@@ -1,6 +1,6 @@
 # A language for defining marking algorithms
 
-**[Demo](state.html)**
+### [Demo](https://christianp.github.io/marking-algorithms/state.html)
 
 A marking algorithm is a set of *notes*.
 
