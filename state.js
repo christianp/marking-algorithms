@@ -138,7 +138,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             if(!result) {
                 return scope.evaluate(args[1]);
             } else {
-                return false;
+                return new TBool(false);
             }
         }
     }));
@@ -205,7 +205,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
                 stateful_scope, 
                 {
                     variables: {
-                        studentanswer: new TString(studentAnswer),
+                        studentanswer: Numbas.jme.builtinScope.evaluate(studentAnswer),
                         settings: Numbas.jme.wrapValue(JSON.parse(settings))
                     }
                 }
@@ -279,7 +279,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
                         valid = false;
                     }
                     break;
-                case 'warn':
+                case 'warning':
                     warnings.push(state.message);
                     break;
                 case 'feedback':
@@ -338,6 +338,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         } catch(e) {
             error_box.classList.add('has-error');
             error_box.innerHTML = e.message;
+            console.log(e.stack);
         }
     }
     algorithm_input.addEventListener('input',update);
