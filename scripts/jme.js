@@ -2054,7 +2054,7 @@ function varnamesAgree(array1, array2) {
  * @enum {function}
  * @memberof Numbas.jme 
  */
-var checkingFunctions = 
+var checkingFunctions = jme.checkingFunctions = 
 {
 	/** Absolute difference between variables - fail if bigger than tolerance */
 	absdiff: function(r1,r2,tolerance) 
@@ -2211,7 +2211,7 @@ var findvars = jme.findvars = function(tree,boundvars,scope)
  * @param {number} checkingAccuracy
  * @returns {boolean}
  */
-function resultsEqual(r1,r2,checkingFunction,checkingAccuracy)
+var resultsEqual = jme.resultsEqual = function(r1,r2,checkingFunction,checkingAccuracy)
 {	// first checks both expressions are of same type, then uses given checking type to compare results
 
 	var v1 = r1.value, v2 = r2.value;
@@ -2272,5 +2272,73 @@ function resultsEqual(r1,r2,checkingFunction,checkingAccuracy)
 		return util.eq(r1,r2);
 	}
 };
+
+jme.varsUsed = function(tree) {
+    switch(tree.tok.type) {
+        case 'name':
+            return [tree.tok.name];
+        case 'op':
+        case 'function':
+            var o = [];
+            for(var i=0;i<tree.args.length;i++) {
+                o = o.concat(jme.varsUsed(tree.args[i]));
+            }
+            return o;
+        default:
+            return [];
+    }
+};
+
+/*
+ * compare vars used lexically, then longest goes first if one is a prefix of the other
+ * then by data type
+ * then by function name
+ * otherwise return 0
+ *   
+ * @returns -1 if a is less, 0 if equal, 1 if a is more
+ */
+jme.compareTrees = function(a,b) {
+    var va = jme.varsUsed(a);
+    var vb = jme.varsUsed(b);
+    for(var i=0;i<va.length;i++) {
+        if(i>=vb.length) {
+            return -1;
+        }
+        if(va[i]!=vb[i]) {
+            return va[i]<vb[i] ? -1 : 1;
+        }
+    }
+    if(vb.length>va.length) {
+        return 1;
+    }
+    if(a.tok.type!=b.tok.type) {
+        var order = ['op','function'];
+        var oa = order.indexOf(a.tok.type);
+        var ob = order.indexOf(b.tok.type);
+        if(oa!=ob) {
+            return oa>ob ? -1 : 1;
+        } else {
+            return a.tok.type<b.tok.type ? -1 : 1;
+        }
+    }
+    switch(a.tok.type) {
+        case 'op':
+        case 'function':
+            if(a.tok.name!=b.tok.name) {
+                return a.tok.name<b.tok.name ? -1 : 1;
+            }
+            if(a.args.length!=b.args.length) {
+                return a.args.length<b.args.length ? -1 : 1;
+            }
+            for(var i=0;i<a.args.length;i++) {
+                var c = jme.compareTrees(a.args[i],b.args[i]);
+                if(c!=0) {
+                    return c;
+                }
+            }
+            break;
+    }
+    return 0;
+}
 
 });

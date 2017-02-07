@@ -44,6 +44,8 @@ var TName = types.TName;
 var TRange = types.TRange;
 var TSet = types.TSet;
 var TVector = types.TVector;
+var TExpression = types.TExpression;
+var TOp = Numbas.jme.types.TOp;
 
 
 /** The built-in JME evaluation scope
@@ -51,17 +53,6 @@ var TVector = types.TVector;
  * @memberof Numbas.jme
  */
 var builtinScope = jme.builtinScope = new Scope();
-
-builtinScope.functions['eval'] = [{
-	name: 'eval',
-	intype: ['?'],
-	outtype: '?',
-	typecheck: function(){return true;},
-	doc: {
-		usage: ['eval(x+2)'],
-		description: 'Dummy function used by simplification rules to evaluate an expression.'
-	}
-}];
 
 var funcs = {};
 
@@ -180,6 +171,17 @@ newBuiltin('in',[TNum,TRange],TBool,function(x,r) {
 
 newBuiltin('list',[TRange],TList,function(range) {
     return math.rangeToList(range).map(function(n){return new TNum(n)});
+});
+
+newBuiltin('dict',[TList],TDict,null, {
+    evaluate: function(args,scope) {
+        var value = {};
+        var items = scope.evaluate(args[0]).value;
+        items.forEach(function(item) {
+            value[item.value[0].value] = item.value[1];
+        });
+        return new TDict(value);
+    }
 });
 
 newBuiltin('dict',['*keypair'],TDict,null,{
@@ -1496,6 +1498,166 @@ newBuiltin('table',[TList],THTML,
 		}
 	}
 );
+
+newBuiltin('parse',[TString],TExpression,function(expr) {
+    return jme.compile(expr);
+});
+
+newBuiltin('head',[TExpression],'?',null, {
+    evaluate: function(args,scope) {
+        return args[0].tree.tok;
+    }
+});
+
+newBuiltin('args',[TExpression],TList,null, {
+    evaluate: function(args, scope) {
+        return new TList(args[0].tree.args.map(function(tree){ return new TExpression(tree); }));
+    }
+});
+
+newBuiltin('name',[TString],TName,function(name){ return name });
+newBuiltin('string',[TName],TString,function(name){ return name });
+newBuiltin('op',[TString],TOp,function(name){ return name });
+
+newBuiltin('assert',[TBool,'?'],'?',null,{
+    evaluate: function(args, scope) {
+        var result = scope.evaluate(args[0]).value;
+        if(!result) {
+            return scope.evaluate(args[1]);
+        } else {
+            return new TBool(false);
+        }
+    }
+});
+Numbas.jme.lazyOps.push('assert');
+
+newBuiltin('try',['?','?'],'?',null, {
+    evaluate: function(args, scope) {
+        try {
+            var res = scope.evaluate(args[0]);
+            return res;
+        } catch(e) {
+            return scope.evaluate(args[1]);
+        }
+    }
+});
+Numbas.jme.lazyOps.push('try');
+
+newBuiltin('exec',[TOp,TList],TExpression,null, {
+    evaluate: function(args, scope) {
+        var tok = args[0];
+        var eargs = args[1].value.map(function(a) {
+            if(a.type!='expression') {
+                return {tok:a};
+            } else {
+                return a.tree;
+            }
+        });
+        return new TExpression({tok: tok, args: eargs});
+    }
+});
+
+newBuiltin('simplify',[TExpression,TString],TExpression,null, {
+    evaluate: function(args, scope) {
+        var tree = args[0].tree;
+        var ruleset = jme.collectRuleset(args[1].value,scope.allRulesets());
+        return new TExpression(jme.display.simplifyTree(tree, ruleset, scope));
+    }
+});
+
+newBuiltin('simplify',[TExpression,TList],TExpression,null, {
+    evaluate: function(args, scope) {
+        var tree = args[0].tree;
+        var ruleset = jme.collectRuleset(args[1].value.map(function(x){ return x.value}),scope.allRulesets());
+        return new TExpression(jme.display.simplifyTree(tree, ruleset, scope));
+    }
+});
+
+newBuiltin('simplify',[TString,TString],TExpression,null, {
+    evaluate: function(args,scope) {
+        return new TExpression(jme.display.simplify(args[0].value,args[1].value,scope));
+    }
+});
+
+newBuiltin('string',[TExpression],TString,null, {
+    evaluate: function(args,scope) {
+        return new TString(jme.display.treeToJME(args[0].tree));
+    }
+});
+
+newBuiltin('eval',[TExpression],'?',null,{
+    evaluate: function(args,scope) {
+        return scope.evaluate(args[0].tree);
+    }
+});
+
+newBuiltin('eval',[TExpression, TDict],'?',null,{
+    evaluate: function(args,scope) {
+        return (new Numbas.jme.Scope([scope,{variables:args[1].value}])).evaluate(args[0].tree);
+    }
+});
+
+
+newBuiltin('findvars',[TExpression],TList,null, {
+    evaluate: function(args, scope) {
+        var vars = jme.findvars(args[0].tree,[],scope);
+        return new TList(vars.map(function(v){ return new TString(v) }));
+    }
+});
+
+newBuiltin('definedvariables',[],TList,null, {
+    evaluate: function(args, scope) {
+        var vars = Object.keys(scope.allVariables());
+        return new TList(vars.map(function(x){ return new TString(x) }));
+    }
+});
+
+newBuiltin('resultsequal',['?','?',TString,TNum],TBool,null, {
+    evaluate: function(args, scope) {
+        var a = args[0];
+        var b = args[1];
+        var accuracy = args[3].value;
+        var checkingFunction = jme.checkingFunctions[args[2].value.toLowerCase()];
+        return new TBool(jme.resultsEqual(a,b,checkingFunction,accuracy));
+    }
+});
+
+newBuiltin('match',[TExpression,TString],TDict,null, {
+    evaluate: function(args, scope) {
+        var expr = args[0].tree;
+        var pattern = Numbas.jme.compile(args[1].value);
+        var match = Numbas.jme.display.matchTree(pattern,expr,true);
+        if(!match) {
+            return jme.wrapValue({match: false, groups: {}});
+        } else {
+            var groups = {}
+            for(var x in match) {
+                groups[x] = new TExpression(match[x]);
+            }
+            return jme.wrapValue({
+                match: true,
+                groups: groups
+            });
+        }
+    }
+});
+
+newBuiltin('matches',[TExpression,TString],TBool,null, {
+    evaluate: function(args, scope) {
+        var expr = args[0].tree;
+        var pattern = Numbas.jme.compile(args[1].value);
+        var match = Numbas.jme.display.matchTree(pattern,expr,true);
+        return new TBool(match && true);
+    }
+});
+
+newBuiltin('canonical_compare',['?','?'],TNum,null, {
+    evaluate: function(args,scope) {
+        var cmp = jme.compareTrees(args[0],args[1]);
+        return new TNum(cmp);
+    }
+});
+jme.lazyOps.push('canonical_compare');
 
 ///end of builtins
 });

@@ -149,7 +149,13 @@ jme.display = /** @lends Numbas.jme.display */ {
 					var match;
 					if(match = rules[i].match(exprTree,scope))	//if rule can be applied, apply it!
 					{
+                        console.info(rules[i].patternString);
+                        console.log(Numbas.jme.display.treeToJME(exprTree));
+                        for(var x in match) {
+                            console.log('   '+x+': '+Numbas.jme.display.treeToJME(match[x]));
+                        }
 						exprTree = jme.substituteTree(Numbas.util.copyobj(rules[i].result,true),new jme.Scope([{variables:match}]));
+                        console.log(Numbas.jme.display.treeToJME(exprTree));
 						applied = true;
 						break;
 					}
@@ -1303,8 +1309,7 @@ var typeToJME = Numbas.jme.display.typeToJME = {
 		var op = tok.name;
 		var args = tree.args, l = args.length;
 
-		for(var i=0;i<l;i++)
-		{
+		for(var i=0;i<l;i++) {
 			var arg_type = args[i].tok.type;
 			var arg_value = args[i].tok.value;
 			var pd;
@@ -1328,8 +1333,7 @@ var typeToJME = Numbas.jme.display.typeToJME = {
 		}
 		
 		//omit multiplication symbol when not necessary
-		if(op=='*')
-		{
+		if(op=='*') {
 			//number or brackets followed by name or brackets doesn't need a times symbol
 			//except <anything>*(-<something>) does
 			if( ((args[0].tok.type=='number' && math.piDegree(args[0].tok.value)==0 && args[0].tok.value!=Math.E) || args[0].bracketed) && (args[1].tok.type == 'name' || args[1].bracketed && !jme.isOp(tree.args[1].tok,'-u')) )	
@@ -1338,8 +1342,7 @@ var typeToJME = Numbas.jme.display.typeToJME = {
 			}
 		}
 
-		switch(op)
-		{
+		switch(op) {
 		case '+u':
 			op='+';
 			break;
@@ -1365,12 +1368,17 @@ var typeToJME = Numbas.jme.display.typeToJME = {
 			break;
 		case 'not':
 			op = 'not ';
+            break;
+        case 'fact':
+            op = '!';
+            break;
 		}
 
-		if(l==1)
-			{return op+bits[0];}
-		else
-			{return bits[0]+op+bits[1];}
+		if(l==1) {
+            return tok.postfix ? bits[0]+op : op+bits[0];
+        } else {
+			return bits[0]+op+bits[1];
+        }
 	},
 	set: function(tree,tok,bits,settings) {
 		return 'set('+tok.value.map(function(thing){return treeToJME({tok:thing},settings);}).join(',')+')';
@@ -1386,7 +1394,14 @@ var typeToJME = Numbas.jme.display.typeToJME = {
  * @memberof Numbas.jme.display
  */
 var jmeFunctions = jme.display.jmeFunctions = {
-    'dict': typeToJME.dict
+    'dict': typeToJME.dict,
+    'fact': function(tree,tok,bits,settings) {
+        if(tree.args[0].tok.type=='number' || tree.args[0].tok.type=='name') {
+            return bits[0]+'!';
+        } else {
+            return '( '+bits[0]+' )!';
+        }
+    }
 }
 
 /** Turn a syntax tree back into a JME expression (used when an expression is simplified)
@@ -1965,7 +1980,41 @@ var simplificationRules = jme.display.simplificationRules = {
 
 	otherNumbers: [
 		['?;n^?;m',['n isa "number"','m isa "number"'],'eval(n^m)']
-	]
+	],
+
+    cancelTerms: [
+        ['(?;rest+?;n*?;x) + ?;m*?;y',['n isa "number"','m isa "number"','canonical_compare(x,y)=0'],'rest+eval(n+m)*x'],
+        ['(?;rest+?;n*?;x) + ?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest+eval(n+1)*x'],
+        ['(?;rest+?;x) + ?;n*?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest+eval(n+1)*x'],
+        ['(?;rest+?;x) + ?;y',['canonical_compare(x,y)=0'],'rest+2*x'],
+        ['?;n*?;x+?;m*?;y',['n isa "number"','m isa "number"','canonical_compare(x,y)=0'],'eval(n+m)*x'],
+        ['?;n*?;x+?;y',['n isa "number"','canonical_compare(x,y)=0'],'eval(n+1)*x'],
+        ['?;x+?;n*?;y',['n isa "number"','canonical_compare(x,y)=0'],'eval(n+1)*x'],
+        ['?;x+?;y',['canonical_compare(x,y)=0'],'2*x'],
+
+        ['(?;rest+?;n*?;x) - ?;m*?;y',['n isa "number"','m isa "number"','canonical_compare(x,y)=0'],'rest+eval(n-m)*x'],
+        ['(?;rest+?;n*?;x) - ?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest+eval(n-1)*x'],
+        ['(?;rest+?;x) - ?;n*?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest+eval(1-n)*x'],
+        ['(?;rest+?;x) - ?;y',['canonical_compare(x,y)=0'],'rest+0*x'],
+        ['?;n*?;x-?;m*?;y',['n isa "number"','m isa "number"','canonical_compare(x,y)=0'],'eval(n-m)*x'],
+        ['?;n*?;x-?;y',['n isa "number"','canonical_compare(x,y)=0'],'eval(n-1)*x'],
+        ['?;x-?;n*?;y',['n isa "number"','canonical_compare(x,y)=0'],'eval(1-n)*x'],
+        ['?;x-?;y',['canonical_compare(x,y)=0'],'0*x'],
+
+        ['(?;rest-?;n*?;x) + ?;m*?;y',['n isa "number"','m isa "number"','canonical_compare(x,y)=0'],'rest+eval(m-n)*x'],
+        ['(?;rest-?;n*?;x) + ?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest+eval(1-n)*x'],
+        ['(?;rest-?;x) + ?;n*?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest+eval(1-n)*x'],
+        ['(?;rest-?;n*?;x) - ?;m*?;y',['n isa "number"','m isa "number"','canonical_compare(x,y)=0'],'rest-eval(n+m)*x'],
+        ['(?;rest-?;n*?;x) - ?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest-eval(n+1)*x'],
+        ['(?;rest-?;x) - ?;n*?;y',['n isa "number"','canonical_compare(x,y)=0'],'rest-eval(1+n)*x'],
+        ['(?;rest-?;x) - ?;y',['canonical_compare(x,y)=0'],'rest-2*x'],
+        ['(?;rest-?;x) + ?;y',['canonical_compare(x,y)=0'],'rest+0*x']
+    ],
+
+    canonicalOrder: [
+        ['?;x+?;y',['canonical_compare(x,y)=1'],'y+x'],
+        ['(?;x+?;y)+?;z',['canonical_compare(y,z)=1'],'(x+z)+y']
+    ]
 };
 /** Compile an array of rules (in the form `[pattern,conditions[],result]` to {@link Numbas.jme.display.Rule} objects
  * @param {Array} rules

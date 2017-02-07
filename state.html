@@ -18,6 +18,7 @@
 		<!--JQuery scripts-->
 		<script charset="UTF-8" type="text/javascript" src="scripts/jquery.js"></script>
 
+        <script src="algorithms.js"></script>
 
         <style>
             td, th {
@@ -76,10 +77,34 @@
             #error:not(.has-error) {
                 display: none;
             }
+
+            #algorithms {
+                padding: 0;
+                list-style: none;
+                margin-bottom: 2rem;
+            }
+
+            #algorithms li {
+                display: inline-block;
+            }
+            #algorithms li ~ li {
+                margin-left: 1em;
+            }
         </style>
+
 	</head>
     <body>
         <section>
+
+            <h2>Examples</h2>
+            <div id="algorithm-picker">
+                <ul id="algorithms"></ul>
+            </div>
+
+            <hr>
+
+            <h2>Marking algorithm</h2>
+
             <label for="answer">
                 Answer (available as a string called <code>studentAnswer</code> in the marking algorithm)
                 <input id="answer" name="answer" type="text" value="&quot;1&quot;" />
@@ -185,13 +210,7 @@ as_jme (The student's answer, to be reused by other parts):
         <section>
             <div id="error"></div>
 
-            <table id="output">
-                <thead>
-                    <tr><th>Note</th><th>State</th><th>Value</th></tr>
-                </thead>
-                <tbody class="clear">
-                </tbody>
-            </table>
+            <h2>Summary</h2>
             <div id="summary">
                 <p>Valid: <span class="clear" id="valid"></span></p>
                 <p>Credit: <span class="clear" id="credit"></span></p>
@@ -200,6 +219,17 @@ as_jme (The student's answer, to be reused by other parts):
                 <h3>Warnings</h3>
                 <ul id="warnings" class="clear"></ul>
             </div>
+
+            <hr>
+
+            <h2>Notes</h2>
+            <table id="output">
+                <thead>
+                    <tr><th>Note</th><th>State</th><th>Value</th></tr>
+                </thead>
+                <tbody class="clear">
+                </tbody>
+            </table>
         </section>
 
         <script src="state.js"></script>

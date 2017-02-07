@@ -7,6 +7,7 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         this.new_state = true;
         this.state = [];
         this.states = {};
+        this.state_valid = {};
     }
     StatefulScope.prototype = {
         evaluate: function(expr, variables) {
@@ -16,7 +17,12 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             var old_state = is_top ? [] : (this.state || []);
             this.state = [];
 
-            var v = Numbas.jme.Scope.prototype.evaluate.apply(this,[expr, variables]);
+            try {
+                var v = Numbas.jme.Scope.prototype.evaluate.apply(this,[expr, variables]);
+            } catch(e) {
+                this.new_state = true;
+                throw(e);
+            }
 
             this.state = old_state.concat(this.state);
 
@@ -132,18 +138,6 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         }
     }));
 
-    scope.addFunction(new Numbas.jme.funcObj('assert',[TBool,'?'],'?',null,{
-        evaluate: function(args, scope) {
-            var result = scope.evaluate(args[0]).value;
-            if(!result) {
-                return scope.evaluate(args[1]);
-            } else {
-                return new TBool(false);
-            }
-        }
-    }));
-    Numbas.jme.lazyOps.push('assert');
-
     scope.addFunction(new Numbas.jme.funcObj(';',['?','?'],'?',null, {
         evaluate: function(args,cope) {
             return args[1];
@@ -151,10 +145,10 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
     }));
 
     scope.addFunction(state_fn('apply',[TName],TName,function(args,scope) {
-        var name = args[0].tok.name
+        var name = args[0].tok.name.toLowerCase();
         return {
             return: args[0].tok,
-            state: scope.states[name]
+            state: scope.states[name] || []
         };
     }));
     Numbas.jme.lazyOps.push('apply');
@@ -166,13 +160,16 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
     function makeNote(note) {
         var re_note = /^((?:\$?[a-zA-Z_][a-zA-Z0-9_]*'*)|\?\??)(?:\s*\(([^)]*)\))?\s*:\s*((?:.|\n)*)$/m;
         var m = re_note.exec(note.trim());
+        if(!m) {
+            throw(new Numbas.Error("Invalid note definition:\n"+note));
+        }
         var name = m[1];
         var description = m[2];
         var expr = m[3];
         try {
             var tree = Numbas.jme.compile(expr);
         } catch(e) {
-            throw(e);
+            throw(new Numbas.Error("Error making note "+name+": "+e.message));
         }
         return {
             name: name,
@@ -197,10 +194,14 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             notes.forEach(function(note) {
                 if(note.trim().length) {
                     var res = makeNote(note);
-                    todo[res.name] = res;
+                    todo[res.name.toLowerCase()] = res;
                 }
             });
+        } catch(e) {
+            throw(new Numbas.Error("Error parsing notes\n"+e.message));
+        }
 
+        try {
             var scope = new StatefulScope([
                 stateful_scope, 
                 {
@@ -219,10 +220,30 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
                     try {
                         var res = Numbas.jme.variables.computeVariable.apply(this,arguments);
                         scope.setVariable(name, res);
+                        scope.state_valid[name] = true;
+                        for(var i=0;i<scope.state.length;i++) {
+                            if(scope.state[i].type=='end' && scope.state[i].invalid) {
+                                scope.state_valid[name] = false;
+                                break;
+                            }
+                        }
                     } catch(e) {
-                        throw(e);
+                        var invalid_dep = null;
+                        for(var x of todo[name].vars) {
+                            if(x in todo) {
+                                if(!scope.state_valid[x]) {
+                                    invalid_dep = x;
+                                    break;
+                                }
+                            }
+                        }
+                        if(invalid_dep) {
+                            scope.state_valid[name] = false;
+                        } else {
+                            throw(new Error("Error evaluating note <code>"+name+"</code> - "+e.message));
+                        }
                     }
-                    scope.states[name] = scope.state.slice();
+                    scope.states[name] = scope.state.slice().map(function(s){s.note = s.note || name; return s});
                 }
                 return scope.variables[name];
             });
@@ -232,16 +253,17 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         for(var x in scope.states) {
             var tr = document.createElement('tr');
             var state = '<ul>'+scope.states[x].map(s => '<li>'+JSON.stringify(s)+'</li>').join(' ')+'</ul>';
-            var value = Numbas.jme.display.treeToJME({tok:scope.getVariable(x)});
-            tr.innerHTML = '<td class="description">'+(todo[x].description||x)+'</td><td>'+state+'</td>'+'<td>'+value+'</td>';
+            var value = scope.getVariable(x);
+            var display_value = value ? Numbas.jme.display.treeToJME({tok:value}) : '-';
+            tr.innerHTML = '<td class="description">'+(todo[x].description||x)+'</td><td>'+state+'</td>'+'<td>'+display_value+'</td>';
             output.appendChild(tr);
         }
 
-        var result = finalise_state(scope.states['mark']);
+        var result = finalise_state(scope.states['mark'] || []);
         summary.querySelector('#valid').innerHTML = result.valid ? 'Yes' : 'No';
         summary.querySelector('#credit').innerHTML = result.credit;
-        summary.querySelector('#messages').innerHTML = result.messages.map(x => '<li>'+x+'</li>').join(' ');
-        summary.querySelector('#warnings').innerHTML = result.warnings.map(x => '<li>'+x+'</li>').join(' ');
+        summary.querySelector('#messages').innerHTML = result.messages.length ? result.messages.map(x => '<li>'+x+'</li>').join(' ') : 'none';
+        summary.querySelector('#warnings').innerHTML = result.warnings.length ? result.warnings.map(x => '<li>'+x+'</li>').join(' ') : 'none';
 
         return scope.states;
     }
@@ -336,9 +358,9 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
         try {
             go(answer_input.value, algorithm_input.value, settings_input.value);
         } catch(e) {
+            console.log(e.stack);
             error_box.classList.add('has-error');
             error_box.innerHTML = e.message;
-            console.log(e.stack);
         }
     }
     algorithm_input.addEventListener('input',update);
@@ -353,5 +375,34 @@ Numbas.queueScript('go',['jme','localisation','jme-variables'],function() {
             settings_input.value = originals.settings;
             update();
         }
+    });
+
+    var currentAlgo = null;
+    var currentAlgoName = null;
+
+    for(var name in algorithms) {
+        var li = document.createElement('li');
+        var id = 'algorithm-option-'+name;
+        li.innerHTML = '<label for="'+id+'">'+name+'</label> <input id="'+id+'" type="radio" name="algorithm" value="'+name+'">';
+        document.querySelector('#algorithm-picker ul#algorithms').appendChild(li);
+    }
+    document.getElementById('algorithms').addEventListener('change',function() {
+        var name = document.querySelector('input[name="algorithm"]:checked').value;
+        var algo = algorithms[name];
+
+        var diff = currentAlgo===null || (algorithm_input.value != currentAlgo.script || answer_input.value != currentAlgo.student_answer || settings_input.value != currentAlgo.settings);
+        if(diff) {
+            if(!confirm('Change to the '+name+' algorithm, and lose your changes?')) {
+                document.querySelector('input[name="algorithm"][value="'+currentAlgoName+'"]').checked = true;
+                return;
+            }
+        }
+        currentAlgo = algo;
+        currentAlgoName = name;
+
+        algorithm_input.value = algo.script;
+        answer_input.value = algo.student_answer;
+        settings_input.value = algo.settings;
+        update();
     });
 });

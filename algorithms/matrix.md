@@ -1,3 +1,26 @@
+## Student answer
+
+```
+[["1","0"],["0","1"]]
+```
+
+## Settings
+
+```
+{
+    "correctAnswer": [[1,0],[0,1]],
+    "numberStyle": "en",
+    "precisionType": "dp",
+    "precision": 1,
+    "wrong_precision_credit": 0.5,
+    "tolerance": 1e-10
+}
+```
+
+
+## Marking script
+
+```
 rows (The number of rows in the student's answer): len(studentanswer)
 
 cols (The number of columns in the student's answer): len(studentanswer[0])
@@ -81,3 +104,4 @@ mark:
     apply(wrong_precision)
 
 as_jme: studentMatrix
+```
