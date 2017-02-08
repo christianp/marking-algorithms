@@ -15,6 +15,8 @@ Evaluating a note consists of applying all of its procedures, and storing the fi
 
 Execution order of the notes is determined by dependency.
 
+> (Some context: 'JME' is the name for the scripting language used by the e-assessment system [Numbas](https://www.github.com/numbas/Numbas). Here's [a reference for the JME language](http://numbas-editor.readthedocs.io/en/latest/jme-reference.html).)
+
 ## Special notes
 
 The following notes are required:
