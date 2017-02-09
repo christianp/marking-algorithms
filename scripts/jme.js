@@ -1048,10 +1048,9 @@ var fnSort = util.sortBy('id');
  * @property {object} functions - dictionary of arrays of {@link Numbas.jme.funcObj} objects. There can be more than one function for each name because of signature overloading. To resolve a function name in the scope, use `getFunction`.
  * @property {object} rulesets - dictionary of {@link Numbas.jme.Ruleset} objects. To resolve a ruleset in the scope, use `getRuleset`.
  * @property {object} deleted - an object `{variables: {}, functions: {}, rulesets: {}}`: names of deleted variables/functions/rulesets
- * @property {object} extras - additional variables/functions/rulesets added into this scope, not from a parent scope
  * @property {Numbas.Question} question - the question this scope belongs to
  *
- * @param {Numbas.jme.Scope[]} scopes - Either: nothing, in which case this scope has no parents; a parent Scope object; a list whose first element is a parent scope, and the second element is a dictionary of extra variables/functions/rulesets to store in `this.extras`
+ * @param {Numbas.jme.Scope[]} scopes - Either: nothing, in which case this scope has no parents; a parent Scope object; a list whose first element is a parent scope, and the second element is a dictionary of extra variables/functions/rulesets to store in this scope
  */
 var Scope = jme.Scope = function(scopes) {
 	this.variables = {};
@@ -1064,19 +1063,23 @@ var Scope = jme.Scope = function(scopes) {
         rulesets: {}
     }
 	if(scopes===undefined) {
-        this.extras = {};
         return;
     } 
     if(!$.isArray(scopes)) {
         scopes = [scopes,undefined];
     }
     this.question = scopes[0].question || this.question;
+    var extras;
     if(!scopes[0].evaluate) {
-        this.extras = scopes[0];
-        return;
+        extras = scopes[0];
     } else {
         this.parent = scopes[0];
-        this.extras = scopes[1] || {};
+        extras = scopes[1] || {};
+    }
+    if(extras) {
+        this.variables = extras.variables || this.variables;
+        this.rulesets = extras.rulesets || this.rulesets;
+        this.functions = extras.functions || this.functions;
     }
 
     return;
@@ -1113,9 +1116,6 @@ Scope.prototype = /** @lends Numbas.jme.Scope.prototype */ {
             if(scope.deleted[collection][name]) {
                 return;
             }
-            if(scope.extras[collection] && scope.extras[collection][name]!==undefined) {
-                return scope.extras[collection][name];
-            }
             if(scope[collection][name]!==undefined) {
                 return scope[collection][name];
             }
@@ -1148,9 +1148,6 @@ Scope.prototype = /** @lends Numbas.jme.Scope.prototype */ {
             var scope = this;
             var o = [];
             while(scope) {
-                if(scope.extras.functions && scope.extras.functions[name]!==undefined) {
-                    o = o.merge(scope.extras.functions[name],fnSort);
-                }
                 if(scope.functions[name]!==undefined) {
                     o = o.merge(scope.functions[name],fnSort);
                 }
@@ -1181,13 +1178,6 @@ Scope.prototype = /** @lends Numbas.jme.Scope.prototype */ {
         while(scope) {
             for(var name in scope.deleted[collection]) {
                 deleted[name] = scope.deleted[collection][name];
-            }
-            if(scope.extras[collection]) {
-                for(name in scope.extras[collection]) {
-                    if(!deleted[name]) {
-                        out[name] = out[name] || scope.extras[collection][name];
-                    }
-                }
             }
             for(name in scope[collection]) {
                 if(!deleted[name]) {
@@ -1230,13 +1220,8 @@ Scope.prototype = /** @lends Numbas.jme.Scope.prototype */ {
             out[name] = out[name].merge(fns,fnSort);
         }
         while(scope) {
-            if(scope.extras.functions) {
-                for(var name in scope.extras.functions) {
-                    add(name,scope.extras.functions[name])
-                }
-                for(var name in scope.functions) {
-                    add(name,scope.functions[name])
-                }
+            for(var name in scope.functions) {
+                add(name,scope.functions[name])
             }
         }
         return out;
@@ -2324,6 +2309,16 @@ jme.compareTrees = function(a,b) {
     switch(a.tok.type) {
         case 'op':
         case 'function':
+            function is_pow(t) {
+                return t.tok.name=='^' || (t.tok.name=='*' && t.args[1].tok.name=='^') || (t.tok.name=='/' && t.args[1].tok.name=='^');
+            }
+            var pa = is_pow(a);
+            var pb = is_pow(b);
+            if(pa && !pb) {
+                return -1;
+            } else if(!pa && pb) {
+                return 1;
+            }
             if(a.tok.name!=b.tok.name) {
                 return a.tok.name<b.tok.name ? -1 : 1;
             }
@@ -2337,6 +2332,8 @@ jme.compareTrees = function(a,b) {
                 }
             }
             break;
+        case 'number':
+            return a.tok.value<b.tok.value ? -1 : a.tok.value>b.tok.value ? 1 : 0;
     }
     return 0;
 }
