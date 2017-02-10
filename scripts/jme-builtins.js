@@ -266,6 +266,12 @@ newBuiltin('json_encode', ['?'], TString, null, {
         return s;
     }
 });
+newBuiltin('lpad',[TString,TNum,TString],TString,util.lpad);
+newBuiltin('formatstring',[TString,TList],TString,function(str,extra) {
+    return util.formatString.apply(util,[str].concat(extra));
+},{unwrapValues:true});
+newBuiltin('unpercent',[TString],TNum,util.unPercent);
+newBuiltin('letterordinal',[TNum],TString,util.letterOrdinal);
 
 newBuiltin('html',[TString],THTML,function(html) { return $(html) }, {doc: {usage: ['html(\'<div>things</div>\')'], description: 'Parse HTML from a string', tags: ['element','node']}});
 newBuiltin('image',[TString],THTML,function(url){ return $('<img/>').attr('src',url); }, {doc: {usage: ['image(\'picture.png\')'], description: 'Load an image from the given URL', tags: ['element','image','html']}});
@@ -549,9 +555,17 @@ newBuiltin('parsenumber', [TString,TString], TNum, function(s,style) {return uti
 newBuiltin('parsenumber_or_fraction', [TString,TString], TNum, function(s,style) {return util.parseNumber(s,true,style);});
 newBuiltin('togivenprecision', [TString,TString,TNum,TBool], TBool, math.toGivenPrecision);
 newBuiltin('withintolerance',[TNum,TNum,TNum],TBool, math.withinTolerance);
+newBuiltin('countdp',[TString],TNum,math.countDP);
+newBuiltin('countsigfigs',[TString],TNum,math.countSigFigs);
+newBuiltin('rationalapproximation',[TNum,TNum],TList,math.rationalApproximation,{unwrapValues:true});
 newBuiltin('isnan',[TNum],TBool,function(n) {
     return isNaN(n);
 });
+newBuiltin('isfloat',[TString],TBool,util.isfloat);
+newBuiltin('isfraction',[TString],TBool,util.isFraction);
+newBuiltin('isnumber',[TString],TBool,util.isNumber);
+newBuiltin('cleannumber',[TString,TList],TString,util.cleanNumber,{unwrapValues:true});
+newBuiltin('isbool',[TString],TBool,util.isfloat);
 newBuiltin('perm', [TNum,TNum], TNum, math.permutations, {doc: {usage: 'perm(6,3)', description: 'Count permutations. $^n \\kern-2pt P_r$.', tags: ['combinatorics']}} );
 newBuiltin('comb', [TNum,TNum], TNum, math.combinations , {doc: {usage: 'comb(6,3)', description: 'Count combinations. $^n \\kern-2pt C_r$.', tags: ['combinatorics']}});
 newBuiltin('root', [TNum,TNum], TNum, math.root, {doc: {usage: ['root(8,3)','root(x,n)'], description: '$n$<sup>th</sup> root.', tags: ['cube']}} );
